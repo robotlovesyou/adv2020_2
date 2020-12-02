@@ -89,55 +89,53 @@ struct Record {
 }
 
 impl Record {
-    fn validate(&self) -> (bool, bool) {
+    fn validate_old(&self) -> bool {
         let chars = self.password.chars();
         let count = chars.filter(|c| *c == self.policy.letter).count() as u64;
-        let old_policy = count >= self.policy.from && count <= self.policy.to;
+        count >= self.policy.from && count <= self.policy.to
+    }
 
+    fn validate_new(&self) -> bool {
         let char_vec: Vec<char> = self.password.chars().collect();
-        let new_policy = (char_vec.len() as u64 >= self.policy.from
+        (char_vec.len() as u64 >= self.policy.from
             && char_vec[(self.policy.from - 1) as usize] == self.policy.letter)
             != (char_vec.len() as u64 >= self.policy.to
-                && char_vec[(self.policy.to - 1) as usize] == self.policy.letter);
-        (old_policy, new_policy)
+                && char_vec[(self.policy.to - 1) as usize] == self.policy.letter)
     }
+}
+
+fn lines_to_records(lines: impl Iterator<Item=io::Result<String>>) -> Result<Vec<Record>> {
+    let parser = Parser::new()?;
+    Ok(lines
+        .filter(|res| res.is_ok())
+        .map(|res| res.unwrap()) // OK to unwrap here
+        .map(|line| parser.parse(&line))
+        .filter(|res| res.is_ok())
+        .map(|res| res.unwrap()) // OK to unwrap here
+        .collect())
+}
+
+fn count_old(recs: &Vec<Record>) -> u64 {
+    recs.iter().filter(|rec| rec.validate_old()).count() as u64
+}
+
+fn count_new(recs: &Vec<Record>) -> u64 {
+    recs.iter().filter(|rec| rec.validate_new()).count() as u64
 }
 
 fn main() -> Result<()> {
     let args = env::args().collect::<Vec<String>>();
-    let parser = Parser::new()?;
     if args.len() > 1 {
         let lines = read_lines(&args[1])?;
-        let valid = lines
-            .map(|line_result| {
-                if let Ok(line) = line_result {
-                    parser.parse(&line)
-                } else {
-                    Err(Error::new(format!(
-                        "invalid data: {}",
-                        line_result.err().unwrap()
-                    )))
-                }
-            })
-            .map(|record_result| {
-                record_result.map_or((0u64, 0u64), |rec| {
-                    let (old, new) = rec.validate();
-                    (if old { 1 } else { 0 }, if new { 1 } else { 0 })
-                })
-            })
-            .fold((0u64, 0u64), |acc, itm| {
-                let (old_acc, new_acc) = acc;
-                let (old, new) = itm;
-                (old_acc + old, new_acc + new)
-            });
+        let recs = lines_to_records(lines)?;
 
         println!(
             "The number of valid records by the old method is {}",
-            valid.0
+            count_old(&recs)
         );
         println!(
             "The number of valid records by the new method is {}",
-            valid.1
+            count_new(&recs)
         );
         Ok(())
     } else {
