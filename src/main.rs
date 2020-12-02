@@ -115,11 +115,11 @@ fn lines_to_records(lines: impl Iterator<Item=io::Result<String>>) -> Result<Vec
         .collect())
 }
 
-fn count_old(recs: &Vec<Record>) -> u64 {
+fn count_old(recs: &[Record]) -> u64 {
     recs.iter().filter(|rec| rec.validate_old()).count() as u64
 }
 
-fn count_new(recs: &Vec<Record>) -> u64 {
+fn count_new(recs: &[Record]) -> u64 {
     recs.iter().filter(|rec| rec.validate_new()).count() as u64
 }
 
