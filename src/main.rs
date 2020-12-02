@@ -136,7 +136,7 @@ fn main() -> Result<()> {
             valid.0
         );
         println!(
-            "The number of valud records by the new method is {}",
+            "The number of valid records by the new method is {}",
             valid.1
         );
         Ok(())
